@@ -13,5 +13,13 @@
 	"assets": {
 		"binding": "ASSETS",
 		"directory": "./public"
-	}
+	},
+	"durable_objects": {
+		"bindings": [
+			{ "name": "CHAT_ROOM", "class_name": "ChatRoom" }
+		]
+	},
+	"migrations": [
+		{ "tag": "v1", "new_classes": ["ChatRoom"] }
+	]
 }
