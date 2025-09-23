@@ -1,64 +1,64 @@
-import { DurableObject } from "cloudflare:workers";
+// src/index.ts
 
 /**
- * Welcome to Cloudflare Workers! This is your first Durable Objects application.
- *
- * - Run `npm run dev` in your terminal to start a development server
- * - Open a browser tab at http://localhost:8787/ to see your Durable Object in action
- * - Run `npm run deploy` to publish your application
- *
- * Bind resources to your worker in `wrangler.jsonc`. After adding bindings, a type definition for the
- * `Env` object can be regenerated with `npm run cf-typegen`.
- *
- * Learn more at https://developers.cloudflare.com/durable-objects
+ * Define the environment bindings for our Worker.
+ * This is how we tell TypeScript what is available on the `env` object.
  */
-
-/** A Durable Object's behavior is defined in an exported Javascript class */
-export class MyDurableObject extends DurableObject<Env> {
-	/**
-	 * The constructor is invoked once upon creation of the Durable Object, i.e. the first call to
-	 * 	`DurableObjectStub::get` for a given identifier (no-op constructors can be omitted)
-	 *
-	 * @param ctx - The interface for interacting with Durable Object state
-	 * @param env - The interface to reference bindings declared in wrangler.jsonc
-	 */
-	constructor(ctx: DurableObjectState, env: Env) {
-		super(ctx, env);
-	}
-
-	/**
-	 * The Durable Object exposes an RPC method sayHello which will be invoked when when a Durable
-	 *  Object instance receives a request from a Worker via the same method invocation on the stub
-	 *
-	 * @param name - The name provided to a Durable Object instance from a Worker
-	 * @returns The greeting to be sent back to the Worker
-	 */
-	async sayHello(name: string): Promise<string> {
-		return `Hello, ${name}!`;
-	}
+export interface Env {
+	// This binding is created by the "ai" section in our wrangler.jsonc
+	// and provides access to the Workers AI service.
+	AI: any;
 }
 
 export default {
-	/**
-	 * This is the standard fetch handler for a Cloudflare Worker
-	 *
-	 * @param request - The request submitted to the Worker from the client
-	 * @param env - The interface to reference bindings declared in wrangler.jsonc
-	 * @param ctx - The execution context of the Worker
-	 * @returns The response to be sent back to the client
-	 */
-	async fetch(request, env, ctx): Promise<Response> {
-		// Create a stub to open a communication channel with the Durable Object
-		// instance named "foo".
-		//
-		// Requests from all Workers to the Durable Object instance named "foo"
-		// will go to a single remote Durable Object instance.
-		const stub = env.MY_DURABLE_OBJECT.getByName("foo");
+	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+		// --- 1. Define a Sample Security Scan Result ---
+		// In a real application, this would come from a user upload.
+		// For now, we'll hardcode a simple Nmap-style JSON output.
+		const scanResults = {
+			host: "198.51.100.42",
+			ports: [
+				{ port: 22, protocol: "tcp", service: "ssh", state: "open", banner: "OpenSSH 8.2p1 Ubuntu 4ubuntu0.5" },
+				{ port: 80, protocol: "tcp", service: "http", state: "open", banner: "Apache httpd 2.4.41 ((Ubuntu))" },
+				{ port: 443, protocol: "tcp", service: "https", state: "open", banner: "nginx/1.18.0 (Ubuntu)" },
+				{ port: 3306, protocol: "tcp", service: "mysql", state: "open", banner: "MySQL 5.7.33-0ubuntu0.18.04.1" },
+				{ port: 8080, protocol: "tcp", service: "http-proxy", state: "open", banner: "Apache Tomcat/9.0.55" }
+			]
+		};
 
-		// Call the `sayHello()` RPC method on the stub to invoke the method on
-		// the remote Durable Object instance.
-		const greeting = await stub.sayHello("world");
+		// --- 2. Craft the Prompt for the LLM ---
+		// This is the most important part. We give the AI a role, context,
+		// the data, and a clear command for what we want it to do.
+		const prompt = `
+You are a senior security analyst providing a concise, expert summary of a vulnerability scan.
+A junior engineer has given you the following scan results and asked: "What’s the most critical risk here?"
 
-		return new Response(greeting);
+Scan Data:
+\`\`\`json
+${JSON.stringify(scanResults, null, 2)}
+\`\`\`
+
+Based on the scan data, identify the single most critical risk. Explain it in simple, plain English.
+Describe the potential impact and suggest a clear, actionable first step for remediation.
+Structure your response in Markdown format. Start with a "## Most Critical Risk" heading.
+`;
+
+		// --- 3. Send the Prompt to the AI Model ---
+		// We use the `env.AI` binding to interact with Workers AI.
+		// We're using Llama-3.1-8b-instruct, a powerful and fast model.
+		const response = await env.AI.run(
+			'@cf/meta/llama-3-8b-instruct',
+			{
+				prompt: prompt,
+				stream: false, // We want the full response at once for now
+			}
+		);
+
+		// --- 4. Return the AI's Response ---
+		// The response from the model is in the `response` property of the object.
+		// We return this as a text response with a Markdown content type.
+		return new Response(response.response, {
+			headers: { "Content-Type": "text/markdown" }
+		});
 	},
-} satisfies ExportedHandler<Env>;
+};
