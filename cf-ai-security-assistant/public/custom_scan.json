@@ -1,0 +1,32 @@
+{
+  "scan_id": "scan-a1b2c3d4",
+  "target": "api-gateway.internal",
+  "timestamp": "2025-09-24T11:00:00Z",
+  "summary": "Found 3 critical vulnerabilities",
+  "vulnerabilities": [
+    {
+      "cve": "CVE-2021-44228",
+      "severity": "CRITICAL",
+      "port": 8983,
+      "service": "solr",
+      "details": "Remote code execution vulnerability in Apache Log4j2.",
+      "remediation": "Update Log4j to version 2.17.1 or later."
+    },
+    {
+      "cve": "CVE-2017-5638",
+      "severity": "CRITICAL",
+      "port": 8080,
+      "service": "http-proxy",
+      "details": "Apache Struts 2 Deserialization RCE.",
+      "remediation": "Upgrade to Struts 2.3.32 or 2.5.10.1 or later."
+    },
+    {
+      "cve": "CVE-2019-0232",
+      "severity": "HIGH",
+      "port": 8080,
+      "service": "http-proxy",
+      "details": "Apache Tomcat Remote Code Execution on Windows.",
+      "remediation": "Upgrade Tomcat and ensure the CGI Servlet is disabled."
+    }
+  ]
+}

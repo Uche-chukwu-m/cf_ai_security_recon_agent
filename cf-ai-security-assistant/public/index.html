@@ -23,9 +23,13 @@
                 Hello! I'm your AI Security Assistant. Click "Analyze Scan" to begin.
             </div>
         </div>
+        <!-- Replace the old form with this one in public/index.html -->
         <form id="input-form">
-            <input type="text" id="message-input" value="What’s the most critical risk here?" disabled>
-            <button type="submit">Analyze Scan</button>
+            <input type="file" id="file-input" style="display: none;">
+            <button type="button" id="upload-button">Attach Scan Log</button>
+            <span id="file-name" style="margin: 0 10px; color: #555; font-style: italic;">No file selected</span>
+            <input type="text" id="message-input" placeholder="Ask a question about the scan...">
+            <button type="submit">Send</button>
         </form>
     </div>
     <!-- We will add our JavaScript link here later -->
