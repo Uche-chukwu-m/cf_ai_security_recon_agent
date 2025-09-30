@@ -28,7 +28,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         socket.addEventListener('message', (event) => {
             console.log('Message from server:', event.data);
-            addMessage(event.data, 'ai-message'); // The AI response is raw text/markdown
+            // Try to parse JSON errors first. If parsing fails, treat as plain-text AI response.
+            let parsed;
+            try {
+                parsed = JSON.parse(event.data);
+            } catch (e) {
+                parsed = null;
+            }
+
+            if (parsed && parsed.error) {
+                addMessage(`Error: ${parsed.error}${parsed.details ? ' - ' + parsed.details : ''}`, 'system-message error');
+            } else {
+                // The AI returns plain text/Markdown. Display raw text for now.
+                addMessage(event.data, 'ai-message');
+            }
+
             sendButton.disabled = false;
             sendButton.textContent = 'Send';
         });
