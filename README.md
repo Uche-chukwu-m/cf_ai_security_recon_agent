@@ -67,66 +67,6 @@ Tips:
 { "error": "AI service error", "details": "..." }
 ```
 
-## Deploy to Cloudflare
-
-Make sure you are authenticated with Wrangler (see `wrangler login` or `wrangler login --api-key` per Cloudflare docs) and have the account/zone set up for the Worker.
-
-From `cf-ai-security-assistant` run:
-
-```powershell
-npm run deploy
-```
-
-This runs `wrangler deploy` and publishes the Worker and its assets to Cloudflare. The `wrangler.jsonc` in this project already configures:
-
-- `ai.binding` → provides the `AI` binding used in the Worker to call the Workers AI service.
-- `durable_objects.bindings` → registers the `CHAT_ROOM` Durable Object of class `ChatRoom`.
-- `assets` → serves the `public` directory as static assets.
-
-Important: ensure your Cloudflare account has access to Workers AI and that your account is authorized to use the model(s) referenced in the code. The sample code calls `env.AI.run('@cf/meta/llama-3-8b-instruct', ...)` — you may need to update the model identifier per your Cloudflare account limits and availability.
-
-## Configuration
-
-- `cf-ai-security-assistant/wrangler.jsonc`: main config for Wrangler, assets, AI binding, durable objects and compatibility date.
-- `cf-ai-security-assistant/src/index.ts`: Worker entry. Edit this file to change prompt templates, model selection, or WebSocket behavior.
-- `cf-ai-security-assistant/public/client.js`: frontend logic that connects to `/connect` and sends messages/scan logs. (You can customize the UI there.)
-
-## Prompt builder and local test
-
-To make prompt generation testable and easier to modify, a small prompt builder was added at `cf-ai-security-assistant/src/prompt.ts`.
-
-There is a minimal runnable test at `cf-ai-security-assistant/test/prompt.test.js` that prints a prompt preview and passes/fails with an exit code. Run it from the worker directory using Node (no build step required):
-
-```powershell
-cd .\cf-ai-security-assistant
-node test\prompt.test.js
-```
-
-Client behavior notes:
-- The frontend (`public/client.js`) now attempts to parse incoming WebSocket messages as JSON first. If the message contains an `error` field the UI shows it as a system error message; otherwise the message is displayed as the AI's Markdown/plain-text response.
-
-
-## Code pointers
-
-- The Durable Object class `ChatRoom` handles incoming WebSocket connections and calls `this.env.AI.run(...)` with a crafted prompt. See `cf-ai-security-assistant/src/index.ts` for details. The current implementation expects the `{ question, scan_log }` payload and builds a prompt that includes the raw scan log. The code also includes a small helper `escapeForPrompt` to avoid accidental template-breaking characters in the user-provided question.
-- The Worker routes `/connect` requests to the Durable Object.
-
-## Troubleshooting
-
-- If you get authentication errors when calling the AI, verify your Cloudflare account's Workers AI access and review Wrangler authentication (`wrangler whoami`).
-- If `wrangler dev` does not serve assets, ensure `assets.directory` in `wrangler.jsonc` is `./public` and that `public` contains `index.html` and `client.js`.
-- If deployment fails, run `wrangler deploy --verbose` to see detailed errors.
-
-## Security / Safety notes
-
-This project demonstrates how to wire up Workers AI to process scan data. Do not send sensitive production data to experimental models without appropriate data handling, privacy, and compliance checks.
-
-## Next steps (suggested)
-
-- Ensure the frontend sends `{ question, scan_log }` JSON payloads to the `/connect` WebSocket. If you want richer parsing, replace the raw-log approach with a parser that extracts structured findings (for example from nmap output) and update the prompt accordingly.
-- Add authentication to the frontend/Worker if you intend to limit access to the assistant.
-- Add tests for prompt generation and for parsing the AI response.
-
 ## Contact / Contributing
 
 Feel free to open issues or PRs. If you want help wiring this to a particular CI/CD or customizing the model/prompt, describe your target Cloudflare account and model access.
